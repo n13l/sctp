@@ -25,7 +25,7 @@
 #include <sys/compiler.h>
 #include <sys/cpu.h>
 #include <crypto/crc.h>
-#include <net/sctp/proto.h>
+#include <net/sctp/dec.h>
 
 static const char * const sctp_chunk_type_names[] = {
 	[SCTP_CHUNK_DATA]           = "data",
