@@ -1,0 +1,4 @@
+config SCTP
+        bool "Enable (SCTP)  Stream Control Transmission Protocol [RFC-4960]"
+        default y                                                               
+        help
