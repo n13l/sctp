@@ -1,1 +1,1 @@
-obj-y := dec.o
+obj-$(CONFIG_SCTP) := sctp/
