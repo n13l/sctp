@@ -1,4 +1,14 @@
 config SCTP
         bool "Enable (SCTP)  Stream Control Transmission Protocol [RFC-4960]"
         default y                                                               
+
         help
+        Stream Control Transmission Protocol (SCTP) is a transport-layer 
+        protocol, serving in a similar role to the popular protocols TCP and 
+        UDP. It is standardized by IETF in RFC 4960.
+
+	SCTP provides some of the same service features of both: it is 
+	message-oriented like UDP and ensures reliable, in-sequence transport 
+	of messages with congestion control like TCP; it differs from these in 
+	providing multi-homing and redundant paths to increase resilience and 
+	reliability.
