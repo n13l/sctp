@@ -31,8 +31,8 @@
 #include <sys/compiler.h>
 #include <sys/cpu.h>
 #include <mem/unaligned.h>
-#include <net/ip/proto.h>
-#include <net/eth/proto.h>
+
+__BEGIN_DECLS
 
 #ifndef IPPROTO_SCTP
 #define IPPROTO_SCTP                             132
@@ -72,10 +72,6 @@
 
 #define SCTP_HDR_SIZE       (sizeof(struct sctp_hdr))
 
-#ifndef sctp_dbg
-#define sctp_dbg(fmt, ...)
-#endif
-
 struct sctp_hdr {
 	be16 src_port;
 	be16 dst_port;
@@ -104,8 +100,14 @@ struct sctp_chunk {
 } __attribute__ ((packed));
 
 struct sctp {
-	struct sctp_packet *packet;
-	u16 len;
+	struct sctp_packet *pkt;
+	unsigned int len;
+};
+
+struct sctp_stat {
+	unsigned long long invalid;
+	unsigned long long chunk_data;
+	unsigned long long chunk_init;
 };
 
 void
@@ -119,9 +121,6 @@ sctp_init(struct sctp *sctp, byte *pdu, u16 len);
 
 int
 sctp_decode(struct sctp_packet *msg, unsigned int len);
-
-const char *
-sctp_chunk_print_type(u8 id);
 
 static inline u8
 sctp_chunk_type(struct sctp_chunk *sctp_chunk)
@@ -144,13 +143,15 @@ sctp_chunk_first(struct sctp *sctp)
 static inline struct sctp_chunk *
 sctp_chunk_next(struct sctp *sctp, struct sctp_chunk *chunk)
 {
-	u16 size = sctp_chunk_size_aligned(chunk);
-	u16 rest = sctp->len - SCTP_HDR_SIZE;
+	unsigned size = sctp_chunk_size_aligned(chunk);
+	unsigned rest = sctp->len - SCTP_HDR_SIZE;
 
 	if (rest <= ((((byte *)chunk) - ((byte*)sctp->packet)) + size))
 		return NULL;
 
 	return (struct sctp_chunk *)(((byte *)chunk) + size);
 }
+
+__END_DECLS
 
 #endif

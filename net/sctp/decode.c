@@ -23,27 +23,40 @@
  */
 
 #include <sys/compiler.h>
+#include <sys/log.h>
 #include <sys/cpu.h>
+#include <bsd/array.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 #include <crypto/crc.h>
-#include <net/sctp/dec.h>
+#include <net/sctp/protocol.h>
 
-static const char * const sctp_chunk_type_names[] = {
-	[SCTP_CHUNK_DATA]           = "data",
-	[SCTP_CHUNK_INIT]           = "init",
-	[SCTP_CHUNK_INIT_ACK]       = "init ack",
-	[SCTP_CHUNK_SACK]           = "sack",
-	[SCTP_CHUNK_HBREQ]          = "heartbeat req",
-	[SCTP_CHUNK_HBACK]          = "heartbeat ack",
-	[SCTP_CHUNK_ABORT]          = "abort",
-	[SCTP_CHUNK_SHUTDOWN]       = "shutdown",
-	[SCTP_CHUNK_SHUTDOWN_ACK]   = "shutdown ack",
-	[SCTP_CHUNK_ERROR]          = "error",
-	[SCTP_CHUNK_COOKIE_ECHO]    = "cookie echo",
-	[SCTP_CHUNK_COOKIE_ACK]     = "cookie ack",
-	[SCTP_CHUNK_ECNE]           = "ecne",
-	[SCTP_CHUNK_CWR]            = "cwr",
-	[SCTP_CHUNK_IETF_EXTENSION] = "ietf extension"
-};
+/* O(1) time branchless access for zero-based array (0, 1, 2, ..., N − 2). */
+DEFINE_STATIC_ARRAY_POW2(const char * const, sctp_chunk_types, 5, "n/a",
+	[SCTP_CHUNK_DATA]                         = "data",
+	[SCTP_CHUNK_INIT]                         = "init",
+	[SCTP_CHUNK_INIT_ACK]                     = "init ack",
+	[SCTP_CHUNK_SACK]                         = "sack",
+	[SCTP_CHUNK_HBREQ]                        = "heartbeat req",
+	[SCTP_CHUNK_HBACK]                        = "heartbeat ack",
+	[SCTP_CHUNK_ABORT]                        = "abort",
+	[SCTP_CHUNK_SHUTDOWN]                     = "shutdown",
+	[SCTP_CHUNK_SHUTDOWN_ACK]                 = "shutdown ack",
+	[SCTP_CHUNK_ERROR]                        = "error",
+	[SCTP_CHUNK_COOKIE_ECHO]                  = "cookie echo",
+	[SCTP_CHUNK_COOKIE_ACK]                   = "cookie ack",
+	[SCTP_CHUNK_ECNE]                         = "ecne",
+	[SCTP_CHUNK_CWR]                          = "cwr",
+	[SCTP_CHUNK_IETF_EXTENSION]               = "ietf extension"
+);
+
+/* O(1) time branchless access for one-based array (1, 2, ..., N − 1). */       
+DEFINE_STATIC_ARRAY_POW2(unsigned, chunk_type_offsets, 3, 0,
+	[SCTP_CHUNK_DATA] = offsetof(struct sctp_stat, chunk_data), 
+	[SCTP_CHUNK_INIT] = offsetof(struct sctp_stat, chunk_init), 
+);
+
+static struct sctp_stat sctp_stat = {};
 
 void
 sctp_checksum(struct sctp_packet *msg, unsigned int len)
@@ -60,37 +73,32 @@ sctp_validate(struct sctp_packet *msg, unsigned int len)
 }
 
 const char *
-sctp_chunk_print_type(u8 id)
+sctp_chunk_type_str(unsigned int id)
 {
-	if (id > (u8)array_size(sctp_chunk_type_names))
-		return "undefined";
-			
-	return sctp_chunk_type_names[id];
+	return sctp_chunk_types_fetch_zb(id);
 }
 
 void
 sctp_init(struct sctp *sctp, byte *pdu, u16 len)
 {
-	(*sctp) = (struct sctp) { 
-		.packet = (struct sctp_packet *)pdu, .len = len, 
-	};
-
+	(*sctp) = (struct sctp) { .pkt = (struct sctp_packet *)pdu, .len = len};
 }
 
 int
 sctp_decode(struct sctp_packet *msg, unsigned int len)
 {
-	sctp_dbg("pdu len=%d, spost=%d, dport=%d", len, 
+	trace3("pdu len=%d, spost=%d, dport=%d", len, 
 	         get_u16_be(&msg->hdr.src_port),
 	         get_u16_be(&msg->hdr.dst_port));
 
 	struct sctp_chunk *c = (struct sctp_chunk *)msg + sizeof(*msg);
+	const char *type = sctp_chunk_types_fetch_zb(c->type);
+	unsigned offset = chunk_type_offsets(c->type);
+	FIELD_INC_AT(&sctp_stat, offset, unsigned long long);
 
-	_unused u8 type = sctp_chunk_type(c);
-
-	sctp_dbg("chunk id=%d, flags=%d, len=%d",
-	       c->hdr.id, c->hdr.flags, c->hdr.len);
-	sctp_dbg("tsn=%d, stream_id=%d, stream_sn=%d proto_id=%d",
+	trace3("chunk id=%d, flags=%d, len=%d type=%s",
+	       c->hdr.id, c->hdr.flags, c->hdr.len, type);
+	trace3("tsn=%d, stream_id=%d, stream_sn=%d proto_id=%d",
 	       c->tsn, c->stream_id, c->stream_sn, c->proto_id);
 
 	return 0;
