@@ -109,8 +109,7 @@
 	/* zero-based array with array[N - 1] default element. */ \
 	static inline unsigned name##_index_zb(unsigned index) { \
 		unsigned _x = !(name##_mask & index) * index; \
-		unsigned _y = _x + ((index && !_x) * ((1<<bits)-1)); \
-		return _y; \
+		return _x + ((index && !_x) * ((1<<bits)-1)); \
 	} \
 	static inline type name##_fetch_zb(unsigned index) { \
 		return name[name##_index_zb(index)]; \
@@ -149,8 +148,7 @@
 	/* zero-based array fetcher (0, 1, 2, ..., N − 2) */ \
 	static inline type name##_fetch_zb(unsigned index) { \
 		unsigned _x = !(name##_mask & index) * index; \
-		unsigned _y = _x + ((index && !_x) * ((1<<bits)-1)); \
-		return name[_y]; \
+		return name[_x + ((index && !_x) * ((1<<bits)-1))]; \
 	} \
 	/* one-based array getter (1, 2, ..., N − 1) */ \
 	static inline type name##_fetch_ob(unsigned index) { \
