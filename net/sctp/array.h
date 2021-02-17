@@ -96,14 +96,15 @@
  * Requires GNU Extensions (-std=gnu99)
  */
 
-/* O(1) time branchless access for zero-based and one-based arrays. */
+/* O(1) time branchless access for zero-based and one-based assoc. arrays .*/
 #define DEFINE_STATIC_ARRAY_POW2(type, name, bits, item, ...) \
 	static const unsigned name##_mask = ~((1<<(bits))-1); \
 	static const unsigned name##_bits = bits; \
 	_Pragma("clang diagnostic push") \
 	_Pragma("clang diagnostic ignored \"-Winitializer-overrides\"") \
-	static type name[1 << (bits)] = {[0 ... ((1<<(bits))-1)] = item, \
-	                                 __VA_ARGS__}; \
+	static type name[1 << (bits)] = { \
+		[0 ... ((1<<(bits))-1)] = item, __VA_ARGS__ \
+	}; \
 	_Pragma("clang diagnostic pop") \
 	/* zero-based array fetcher (0, 1, 2, ..., N − 2) */ \
 	/* zero-based array with array[N - 1] default element. */ \
@@ -136,8 +137,9 @@
 	const unsigned name##_bits = bits; \
 	_Pragma("clang diagnostic push") \
 	_Pragma("clang diagnostic ignored \"-Winitializer-overrides\"") \
-	type name[1 << (bits)] = {[0 ... ((1<<(bits))-1)] = item, \
-	                                 __VA_ARGS__}; \
+	type name[1 << (bits)] = { \
+		[0 ... ((1<<(bits))-1)] = item, __VA_ARGS__ \
+	}; \
 	_Pragma("clang diagnostic pop") \
 
 /* O(1) time branchless access for zero-based and one-based arrays. */
@@ -145,14 +147,22 @@
 	extern const unsigned name##_mask; \
 	extern const unsigned name##_bits; \
 	extern type name[1 << (bits)]; \
+	/* zero-based array index (0, 1, 2, ..., N − 2) */ \
+	static inline unsigned name##_index_zb(unsigned index) { \
+		unsigned _x = !(name##_mask & index) * index; \
+		return _x + ((index && !_x) * ((1<<bits)-1)); \
+	} \
+	/* one-based array with array[0] default element. */ \
+	static inline unsigned name##_index_ob(unsigned index) { \
+		return !(name##_mask & index) * index; \
+	} \
 	/* zero-based array fetcher (0, 1, 2, ..., N − 2) */ \
 	static inline type name##_fetch_zb(unsigned index) { \
-		unsigned _x = !(name##_mask & index) * index; \
-		return name[_x + ((index && !_x) * ((1<<bits)-1))]; \
+		return name[name##_index_zb(index)]; \
 	} \
 	/* one-based array getter (1, 2, ..., N − 1) */ \
 	static inline type name##_fetch_ob(unsigned index) { \
-		return name[!(name##_mask & index) * index]; \
+		return name[name##_index_ob(index)]; \
 	} \
 	/* branch based array with array[N - 1] default element. */ \
 	static inline unsigned name##_index(unsigned index) { \
