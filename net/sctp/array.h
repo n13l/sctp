@@ -98,8 +98,8 @@
 
 /* O(1) time branchless access for zero-based and one-based arrays. */
 #define DEFINE_STATIC_ARRAY_POW2(type, name, bits, item, ...) \
-	static const unsigned int name##_mask = ~((1<<(bits))-1); \
-	static const unsigned int name##_bits = bits; \
+	static const unsigned name##_mask = ~((1<<(bits))-1); \
+	static const unsigned name##_bits = bits; \
 	_Pragma("clang diagnostic push") \
 	_Pragma("clang diagnostic ignored \"-Winitializer-overrides\"") \
 	static type name[1 << (bits)] = {[0 ... ((1<<(bits))-1)] = item, \
@@ -107,35 +107,34 @@
 	_Pragma("clang diagnostic pop") \
 	/* zero-based array fetcher (0, 1, 2, ..., N − 2) */ \
 	/* zero-based array with array[N - 1] default element. */ \
-	static unsigned name##_index_zb(unsigned index) { \
-		unsigned _x = (!(name##_mask & index) > 0); \
-		unsigned _y = (_x * index); \
-		unsigned _z = _y + ((index != 0 && _y == 0) * ((1<<bits)-1)); \
-		return _z; \
+	static inline unsigned name##_index_zb(unsigned index) { \
+		unsigned _x = !(name##_mask & index) * index; \
+		unsigned _y = _x + ((index && !_x) * ((1<<bits)-1)); \
+		return _y; \
 	} \
-	static type name##_fetch_zb(unsigned index) { \
+	static inline type name##_fetch_zb(unsigned index) { \
 		return name[name##_index_zb(index)]; \
 	} \
 	/* one-based array getter (1, 2, ..., N − 1) */ \
 	/* one-based array with array[0] default element. */ \
-	static unsigned name##_index_ob(unsigned index) { \
-		return ((!(name##_mask & index)) > 0) * index; \
+	static inline unsigned name##_index_ob(unsigned index) { \
+		return !(name##_mask & index) * index; \
 	} \
-	static type name##_fetch_ob(unsigned index) { \
+	static inline type name##_fetch_ob(unsigned index) { \
 		return name[name##_index_ob(index)]; \
 	} \
 	/* branch based array with array[N - 1] default element. */ \
-	static unsigned name##_index(unsigned index) { \
+	static inline unsigned name##_index(unsigned index) { \
 		return index < array_size(name) ? index: array_size(name) - 1;\
 	} \
-	static type name##_fetch(unsigned index) { \
+	static inline type name##_fetch(unsigned index) { \
 		return name[name##_index(index)]; \
 	}
 
 /* O(1) time branchless access for zero-based and one-based arrays. */
 #define DEFINE_ARRAY_POW2(type, name, bits, item, ...) \
-	const unsigned int name##_mask = ~((1<<(bits))-1); \
-	const unsigned int name##_bits = bits; \
+	const unsigned name##_mask = ~((1<<(bits))-1); \
+	const unsigned name##_bits = bits; \
 	_Pragma("clang diagnostic push") \
 	_Pragma("clang diagnostic ignored \"-Winitializer-overrides\"") \
 	type name[1 << (bits)] = {[0 ... ((1<<(bits))-1)] = item, \
@@ -144,25 +143,24 @@
 
 /* O(1) time branchless access for zero-based and one-based arrays. */
 #define DECLARE_ARRAY_POW2(type, name, bits) \
-	extern const unsigned int name##_mask; \
-	extern const unsigned int name##_bits; \
+	extern const unsigned name##_mask; \
+	extern const unsigned name##_bits; \
 	extern type name[1 << (bits)]; \
 	/* zero-based array fetcher (0, 1, 2, ..., N − 2) */ \
 	static inline type name##_fetch_zb(unsigned index) { \
-		unsigned _x = (!(name##_mask & index) > 0); \
-		unsigned _y = (_x * index); \
-		unsigned _z = _y + ((index != 0 && _y == 0) * ((1<<bits)-1)); \
-		return name[_z]; \
+		unsigned _x = !(name##_mask & index) * index; \
+		unsigned _y = _x + ((index && !_x) * ((1<<bits)-1)); \
+		return name[_y]; \
 	} \
 	/* one-based array getter (1, 2, ..., N − 1) */ \
 	static inline type name##_fetch_ob(unsigned index) { \
-		return name[((!(name##_mask & index)) > 0) * index]; \
+		return name[!(name##_mask & index) * index]; \
 	} \
 	/* branch based array with array[N - 1] default element. */ \
-	static unsigned name##_index(unsigned index) { \
-		return index < array_size(name) ? index: array_size(name) - 1;\
+	static inline unsigned name##_index(unsigned index) { \
+		return index < ARRAY_SIZE(name) ? index: ARRAY_SIZE(name) - 1;\
 	} \
-	static type name##_fetch(unsigned index) { \
+	static inline type name##_fetch(unsigned index) { \
 		return name[name##_index(index)]; \
 	}
 
@@ -210,16 +208,16 @@
 /* Run block on bits of number */
 #define VISIT_ARRAY_BITS_NUM(num, bit, block)                \
 {                                                                    \
-	const unsigned int __count = sizeof(num) * 8; \
+	const unsigned __count = sizeof(num) * 8; \
 	const unsigned __typeof__(num) mask = (1 << (count - 1)); \
 	do {bit = (num & mask) != 0?1:0; block; mask >>= 1;} while (mask > 0); \
 }
 
 #define BSEARCH_FIRST_GE_CMP(ary,N,x,ary_lt_x) \
 ({ \
-	unsigned int l = 0, r = (N); \
+	unsigned l = 0, r = (N); \
 	while (l < r) { \
-		unsigned int m = (l+r)/2; \
+		unsigned m = (l+r)/2; \
 		if (ary_lt_x(ary,m,x)) \
 			l = m+1; \
 		else \
