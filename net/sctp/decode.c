@@ -32,7 +32,7 @@
 #include <net/sctp/protocol.h>
 
 /* O(1) time branchless access for zero-based array (0, 1, 2, ..., N − 2). */
-DEFINE_STATIC_ARRAY_POW2(const char * const, sctp_chunk_types, 5, "n/a",
+STATIC_ARRAY_STREAMLINED(const char * const, sctp_chunk_types, "n/a",
 	[SCTP_CHUNK_DATA]                         = "data",
 	[SCTP_CHUNK_INIT]                         = "init",
 	[SCTP_CHUNK_INIT_ACK]                     = "init ack",
@@ -50,8 +50,7 @@ DEFINE_STATIC_ARRAY_POW2(const char * const, sctp_chunk_types, 5, "n/a",
 	[SCTP_CHUNK_IETF_EXTENSION]               = "ietf extension"
 );
 
-/* O(1) time branchless access for one-based array (1, 2, ..., N − 1). */       
-DEFINE_STATIC_ARRAY_POW2(unsigned, chunk_type_offsets, 3, 0,
+STATIC_ARRAY_STREAMLINED(unsigned, chunk_type_offsets, 0,
 	[SCTP_CHUNK_DATA] = offsetof(struct sctp_stat, chunk_data), 
 	[SCTP_CHUNK_INIT] = offsetof(struct sctp_stat, chunk_init), 
 );
